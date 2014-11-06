@@ -37,6 +37,7 @@ where [options] are:
           opt :stderr, "Redirect stderr to logfile", :type => String,    :short => '-e'
           opt :nosync, "Don't sync logfiles on every write"
           opt :pidfile, "PID file location",         :type => String,    :short => "-p"
+          opt :"no-pidfile", "Force no pidfile, even if daemonized"
           opt :environment, "Set RAILS_ENV/RACK_ENV/RESQUE_ENV", :type => String, :short => "-E"
           opt :term_graceful_wait, "On TERM signal, wait for workers to shut down gracefully"
           opt :term_graceful,      "On TERM signal, shut down workers gracefully"
@@ -48,6 +49,11 @@ where [options] are:
           opts[:stderr]  ||= "log/resque-pool.stderr.log"
           opts[:pidfile] ||= "tmp/pids/resque-pool.pid"
         end
+
+        if opts[:"no-pidfile"]
+          opts.delete(:pidfile)
+        end
+
         opts
       end
 
