@@ -9,6 +9,7 @@ module Resque
 
       def run
         opts = parse_options
+        obtain_shared_lock opts[:lock]
         daemonize if opts[:daemon]
         manage_pidfile opts[:pidfile]
         redirect opts
@@ -32,6 +33,7 @@ where [options] are:
           EOS
           opt :config, "Alternate path to config file", :type => String, :short => "-c"
           opt :appname, "Alternate appname",         :type => String,    :short => "-a"
+          opt :lock,   "Open a shared lock on a file", :type => String,  :short => "-l"
           opt :daemon, "Run as a background daemon", :default => false,  :short => "-d"
           opt :stdout, "Redirect stdout to logfile", :type => String,    :short => '-o'
           opt :stderr, "Redirect stderr to logfile", :type => String,    :short => '-e'
@@ -63,6 +65,18 @@ where [options] are:
         Process.setsid
         raise 'Second fork failed' if (pid = fork) == -1
         exit unless pid.nil?
+      end
+
+      # Obtain a lock on a file that will be held for the lifetime of
+      # the process.  This aids in concurrent daemonized deployment with
+      # process managers like upstart since multiple pools can share a
+      # lock, but not a pidfile.
+      def obtain_shared_lock(lock_path)
+        return unless lock_path
+        @lock_file = File.open(lock_path, 'w')
+        unless @lock_file.flock(File::LOCK_SH)
+          fail "unable to obtain shared lock on #{@lock_file}"
+        end
       end
 
       def manage_pidfile(pidfile)
