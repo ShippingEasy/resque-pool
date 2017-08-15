@@ -128,6 +128,7 @@ module Resque
     end
 
     def load_config
+      return if @winched # don't fetch config if WINCH signal was sent
       @config = config_loader.call(environment)
     end
 
@@ -203,6 +204,7 @@ module Resque
         signal_all_workers(signal)
       when :HUP
         log "HUP: reset configuration and reload logfiles"
+        @winched = false # reset winched flag on HUP
         reset_config
         Logging.reopen_logs!
         log "HUP: gracefully shutdown old children (which have old logfiles open)"
@@ -216,6 +218,7 @@ module Resque
       when :WINCH
         if self.class.handle_winch?
           log "WINCH: gracefully stopping all workers"
+          @winched = true
           @config = {}
           maintain_worker_count
         end

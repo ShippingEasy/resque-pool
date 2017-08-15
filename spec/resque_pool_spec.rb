@@ -227,6 +227,21 @@ describe Resque::Pool, "the pool configuration custom loader" do
     custom_loader.should have_received(:call).twice
   end
 
+  it "should not reload the config after WINCH" do
+    custom_loader = double(call: {"foo" => 1})
+    Resque::Pool.handle_winch = true
+    pool = no_spawn(Resque::Pool.new(custom_loader))
+
+    pool.config.should == {"foo" => 1}
+
+    pool.sig_queue.push :WINCH
+    pool.handle_sig_queue!
+    pool.load_config
+    pool.config.should == {}
+    # The custom loader should only receive one call (from the init)
+    custom_loader.should have_received(:call).once
+  end
+
   it "can be a lambda" do
     RAILS_ENV = "fake"
     count = 1
